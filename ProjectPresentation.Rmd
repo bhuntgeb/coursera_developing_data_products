@@ -1,0 +1,103 @@
+---
+title: "Linear Regression with mtcars dataset"
+author: "Bastian Huntgeburth"
+date: "14 Februar 2019"
+output:
+  ioslides_presentation: default
+  slidy_presentation: default
+fontsize: 8pt
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## Overview {.smaller}
+
+This presentation gives an overview about a RStudio shiny application, that was developed as a part of the week4-project in the Developing Data Products course on coursera.   
+  
+The application ist hosted on: https://bhuntge.shinyapps.io/ProjectLmMtcars/    
+The code (ui.R, server.R) is also on github: https://github.com/bhuntgeb/coursera_developing_data_products
+   
+The application includes:    
+- The use of the mtcars dataset to do a linear regression for mpg as outcome  
+- Input values to subset the data for min/max values of the predictors (wt + cyl)   
+- Create scatter plots of the data and adds the fitted regression line    
+
+
+## Short description of the Data Product {.smaller}
+
+- The slider inputs set the min/max values of the wt-feature to subset the data
+- The min/max values are indicated by the red lines  
+- This is the produced scatter plot
+
+```{r}
+fit<-lm(mpg ~ wt + cyl, data = mtcars)
+plot(mtcars$wt, mtcars$mpg, xlab = "wt", ylab = "mpg", main = "mtcars", xlim = c(1,6), cex = 1.5, pch = 16, bty = "n", col=mtcars$cyl)
+abline(a=fit[[1]][1]+ (mean(mtcars$cyl)*fit[[1]][3]), b= fit[[1]][2], col = "blue", lwd = 2)
+          abline(v=1, col ="red")
+          abline(v=6, col ="red")
+```         
+
+
+
+## The ui.R Frontend {.smaller}
+
+- The ui.R frontend has several input values in a side panel
+```{r, eval =FALSE, echo=TRUE}
+sidebarLayout(
+  sidebarPanel(       
+    h2("Get started!"), p("Some description....  ",
+    # some input values
+    sliderInput("sliderWt", "Weight value", 1, 6, value = c(1, 6), step = 0.1),
+    sliderInput("sliderCyl", "Cylinders value", 3, 9, value = c(3, 9), step = 0.1)
+  ),
+  ...
+    ```
+- ... and several text outputs and plots on the main panel
+    ```{r, eval =FALSE, echo=TRUE}
+mainPanel(
+  # some output value
+  h3("Regression coefficients"),
+  p("Intercept: ",textOutput("intOutWt", inline = TRUE)),
+  p("Slope of 'wt' coefficient:",textOutput("slopeOutWt", inline = TRUE)),
+  <.....>
+  # A tabset with two tabs, that display plot outputs            
+  tabsetPanel(type = "tabs",
+    tabPanel("MPG vs. Wt", br(), plotOutput("plot1")),
+    tabPanel("MPG vs. Cyl", br(), plotOutput("plot2"))
+)
+``` 
+
+
+## The server.R Backend {.smaller}  
+- The 'reactive' function reads input values and does the linear regression
+```{r, eval =FALSE, echo=TRUE}
+model<-reactive({
+  cylMin<-input$sliderCyl[1],  cylMax<-input$sliderCyl[2]  # Read the slider input
+  wtMin<-input$sliderWt[1],   wtMax<-input$sliderWt[2]
+  # subset the mtcars dataset              
+  subCyl<-mtcars[(mtcars$cyl< cylMax)& (mtcars$cyl> cylMin),]
+  subWt<-mtcars[(mtcars$wt< wtMax)& (mtcars$wt> wtMin),]
+  subData<-intersect(subCyl, subWt)
+  # train a lines regression               
+  fit<-lm(mpg ~ wt + cyl, data = subData)
+  fit })
+
+```
+- The scatter plot is rendered and sent to the ui.R frontend  
+
+```{r,eval =FALSE, echo=TRUE}
+  output$plot1 <- renderPlot({
+          # Scatterplot
+          plot(mtcars$wt, mtcars$mpg, xlab = "wt", 
+               ylab = "mpg", main = "mtcars", xlim = c(1,6), 
+               cex = 1.5, pch = 16, bty = "n", col=mtcars$cyl)
+          # Draw fitted and min/max lines 
+          abline(a=....., b= ...., col = "blue", lwd = 2)
+          abline(v=input$sliderWt[2], col ="red")
+          abline(v=input$sliderWt[1], col ="red")
+  })          
+```
+
+
